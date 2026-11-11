@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
 // --- CONFIGURACIÓN BASE ---
 const CONFIG = {
   defaultUrl: 'https://www.bershka.com/mx/pack-3-calcetines-color-c0p229737233.html?colorId=600',
-  headless: false, // <-- Ventana visible en pantalla
+  headless: true, // 👻 Ejecución oculta en segundo plano
   timeout: parseInt(process.env.TIMEOUT_MS, 10) || 45000
 };
 
@@ -569,20 +569,24 @@ async function autocompletar_datos(page, dato_numero, dato_vencimiento, dato_cvv
 
   await targetContext.waitForTimeout(500);
 
-  const btnDropdownModalidad = targetContext.locator('button:has-text("MODALIDAD DE PAGO"), [data-qa-anchor*="payment-modality"], .bds-dropdown__header, label:has-text("MODALIDAD DE PAGO"), div:has-text("MODALIDAD DE PAGO")').first();
-  if (await btnDropdownModalidad.isVisible().catch(() => false)) {
-    await btnDropdownModalidad.click().catch(() => {});
-  } else {
-    await targetContext.getByText('MODALIDAD DE PAGO', { exact: false }).click().catch(() => {});
+  // --- MANEJO SEGURO Y NO BLOQUEANTE DE MODALIDAD DE PAGO ---
+  try {
+    const btnDropdownModalidad = targetContext.locator('button:has-text("MODALIDAD DE PAGO"), [data-qa-anchor*="payment-modality"], .bds-dropdown__header, label:has-text("MODALIDAD DE PAGO"), div:has-text("MODALIDAD DE PAGO")').first();
+    if (await btnDropdownModalidad.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await btnDropdownModalidad.click({ force: true }).catch(() => {});
+      await targetContext.waitForTimeout(400);
+
+      const opcionImmediate = targetContext.locator('span.bds-dropdown-option__label, li, [role="option"]').filter({ hasText: /immediate|inmediat|pago/i }).first();
+      if (await opcionImmediate.isVisible({ timeout: 1500 }).catch(() => false)) {
+        await opcionImmediate.click({ force: true }).catch(() => {});
+      } else {
+        await targetContext.keyboard.press('ArrowDown').catch(() => {});
+        await targetContext.keyboard.press('Enter').catch(() => {});
+      }
+    }
+  } catch (_) {
+    await targetContext.keyboard.press('Escape').catch(() => {});
   }
-
-  await targetContext.waitForTimeout(500);
-
-  const opcionImmediate = targetContext.locator('span.bds-dropdown-option__label').filter({ hasText: 'Immediate payment' }).first();
-  await opcionImmediate.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-  await opcionImmediate.click().catch(async () => {
-    await targetContext.getByText('Immediate payment', { exact: false }).click().catch(() => {});
-  });
 
   await targetContext.waitForTimeout(500);
 }
@@ -954,7 +958,7 @@ function crearBotTelegram(token) {
       await ctx.reply('✅ Completado:\n' + steps.join(' ➔ '));
     } catch (error) {
       logDiagnostico('RECORRIDO_COMMAND_ERROR');
-      console.error('Detalle error recorrido:', error);
+      console.error('Error en el recorrido:', error);
       await ctx.reply(`❌ Error en el recorrido: ${error.message}`).catch(() => {});
     } finally {
       if (browser) {
@@ -1028,7 +1032,7 @@ async function main() {
       }
     }
   } else {
-    console.log('[Runner] Iniciando en modo Daemon Telegram...');
+    console.log('[Runner] Inf. Iniciando en modo Daemon Telegram...');
     const bot = crearBotTelegram(process.env.BOT_TOKEN);
     await bot.launch({ dropPendingUpdates: true });
     console.log('[Runner] Bot conectado y escuchando comandos.');
