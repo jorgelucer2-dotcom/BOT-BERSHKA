@@ -1,0 +1,17 @@
+# Usamos la imagen oficial de Microsoft Playwright que ya trae todo instalado (Chromium y librerías del sistema)
+FROM mcr.microsoft.com/playwright:v1.48.0-noble
+
+# Directorio de trabajo en el contenedor
+WORKDIR /app
+
+# Copiamos los archivos de dependencias
+COPY package*.json ./
+
+# Instalamos las dependencias de Node
+RUN npm ci
+
+# Copiamos el resto del código del bot
+COPY . .
+
+# Comando para arrancar tu bot de Telegram
+CMD ["node", "index.js"]
