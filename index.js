@@ -871,7 +871,6 @@ function crearBotTelegram(token) {
 
         let browser;
         try {
-          // En Render sin entorno gráfico, lanzamos playwright chromium estándar
           browser = await chromium.launch(launchOptions);
         } catch (_) {
           browser = await chromium.launch(launchOptions);
@@ -990,12 +989,12 @@ function crearBotTelegram(token) {
 async function main() {
   const PORT = process.env.PORT || 3000;
 
-  // 🌐 Servidor HTTP básico para satisfacer el requisito de puertos abiertos de Render
+  // 🌐 Servidor HTTP enlazado a '0.0.0.0' para que Render detecte el puerto abierto y no dé timeout
   http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot de Telegram activo y funcionando correctamente.');
-  }).listen(PORT, () => {
-    console.log(`[HTTP] Servidor web escuchando en el puerto ${PORT}`);
+  }).listen(parseInt(PORT, 10), '0.0.0.0', () => {
+    console.log(`[HTTP] Servidor web escuchando en 0.0.0.0:${PORT}`);
   });
 
   console.log('[Runner] Iniciando en modo Daemon Telegram...');
